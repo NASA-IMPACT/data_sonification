@@ -13,27 +13,44 @@ import datetime
 import time
 import os
 
-columns_to_include = [
-    "time",
-    "Min EVI",
-    "Max EVI",
-    "Mean EVI",
-    "Median EVI",
-    "Standard Deviation EVI",
-]
-input_file = st.file_uploader("Upload Data in CSV format", type="csv")
+
+params_lst = st.container()
+input_file = "None"
+
+with st.sidebar.expander("Sample Datasets"):
+    st.markdown("<h4 style='color: white' >Sample Dataset</h4>", unsafe_allow_html=True)
+    param_lst = ["None", "dvi", "globalwarming"]
+    param_slct = st.selectbox("", param_lst)
+    if param_slct == "dvi":
+        input_file = "./examples/dvi.csv"
+        is_global_warming = False
+    elif param_slct == "globalwarming":
+        input_file = "./examples/globalwarming.csv"
+        is_global_warming = True
+    else:
+        with st.sidebar.expander("Upload the data in CSV format"):
+            input_file = st.file_uploader("Upload Data in CSV Format", type="csv")
+
 params_lst = st.container()
 if input_file:
-    df = get_cusomized_data(
-        csv_file_path=input_file, columns_to_include=columns_to_include
-    )
-    #st.dataframe(df)
+    try:
+        df = get_cusomized_data(
+            csv_file_path=input_file, is_global_warming=is_global_warming
+        )
+    except KeyError:
+        print(KeyError)
+        st.error(
+            "Please make sure the uploaded dataset has date_time as first column",
+            icon="🚨",
+        )
+    # st.dataframe(df)
     times = df["time_elapsed_minutes"].values
     with params_lst:
         param_lst = list(df.columns)
-        param_lst.remove("time")
+        param_lst.remove("date_time")
         param_lst.remove("time_elapsed_minutes")
-        default_value_indx = param_lst.index("Mean EVI")
+        param_lst.remove("time_years")
+        default_value_indx = param_lst.index(param_lst[0])
         param_slct = st.selectbox(
             "Select EVI Parameter", param_lst, index=default_value_indx
         )
@@ -47,9 +64,9 @@ if input_file:
     if plot_data:
         draw_plot(
             title=f"[{param_slct}] data",
-            times=df["time"].values,
+            times=df["date_time"].values,
             param_slct=param_slct_values,
-            xlabel="Time",
+            xlabel="date_time",
             ylabel=param_slct,
             scale=param_slct_values * 50,
         )
@@ -125,7 +142,7 @@ if input_file:
             title=f"{param_slct} normalized data",
             times=times,
             param_slct=y_data,
-            xlabel=f"Time [minutes] since {min(df['time']).strftime('%Y-%m-%d %H:%M')}",
+            xlabel=f"Time [minutes] since {min(df['date_time']).strftime('%Y-%m-%d %H:%M')}",
             ylabel=f"{param_slct} [normalized]",
             scale=50 * y_data,
         )

@@ -73,19 +73,23 @@ def read_data(
     if not columns_to_include:
         columns_to_include = []
     df = pd.read_csv(csv_file_path, index_col=index_col)
-    cols = list(df.columns) + columns_to_drop
-    for ele in columns_to_include:
-        cols.remove(ele)
-    return df.drop(list(set(cols)), axis=1)
+    # cols = list(df.columns) + columns_to_drop
+    # for ele in columns_to_include:
+    #     cols.remove(ele)
+    # return df.drop(list(set(cols)), axis=1)
+    return df
 
 
-def get_cusomized_data(csv_file_path, columns_to_include):
-    df = read_data(csv_file_path=csv_file_path, columns_to_include=columns_to_include)
+def get_cusomized_data(csv_file_path, is_global_warming=False):
+    df = read_data(csv_file_path=csv_file_path)
+    if is_global_warming:
+        df["date_time"] = pd.to_datetime(df["date_time"], format="%Y")
 
-    df["time"] = pd.to_datetime(df["time"])
-    df.sort_values(by=["time"], inplace=True)
+    df["date_time"] = pd.to_datetime(df["date_time"])
+    df.sort_values(by=["date_time"], inplace=True)
     df.reset_index(inplace=True)
-    df["time_elapsed_minutes"] = df["time"] - min(df["time"])
+    df["time_elapsed_minutes"] = df["date_time"] - min(df["date_time"])
+    df["time_years"] = df.date_time.dt.year
     df["time_elapsed_minutes"] = df["time_elapsed_minutes"].apply(
         lambda row: (row.days * 24 * 60) + (row.seconds // 60)
     )
