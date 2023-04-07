@@ -1,72 +1,71 @@
 import streamlit as st
-from create_music import generate_audio_file, play_music, stop_music
-from data_preprocessing import customized_data
-from create_plot import draw_plot, map_range, make_chart, make_chart_go_bar_up
-from audiolazy import str2midi
-import datetime
+
+import pandas as pd
 import time
 import os
+from helpers import (
+    draw_plot,
+    map_range,
+    generate_audio_file,
+    play_music,
+    stop_music,
+    make_chart,
+    make_bar_chart,
+    make_chart_go_bar,
+    make_chart_go_bar_up
+)
+from audiolazy import str2midi
 
+def get_cusomized_data(csv_file_path):
+    df = pd.read_csv(csv_file_path, index_col=None)
 
+    df["time"] = pd.to_datetime(df["time"])
+    df['time_years'] = df['time'].dt.year
+    df.sort_values(by=["time"], inplace=True)
+    df.reset_index(inplace=True)
+    df["time_elapsed_months"] = df["time"] - min(df["time"])
+    df["time_elapsed_months"] = df["time_elapsed_months"].apply(
+        lambda row: (row.days)
+    )
+    df.drop(["index"], axis=1, inplace=True)
+    return df
+
+input_file = st.file_uploader("Upload Data in CSV format", type="csv")
 params_lst = st.container()
-# input_file = "None"
-#st.sidebar.markdown("Select a variable")
-param_lst =[os.path.basename(file_) for file_ in os.listdir("./examples")] + ["upload file"]
-is_global_warming = False
-
-param_slct = st.sidebar.selectbox("Select a variable", param_lst)
-
-input_file = f"./examples/{param_lst[0]}"
-if param_slct == "globalwarming.csv":
-    input_file = "./examples/globalwarming.csv"
-    is_global_warming = True
-
-if param_slct == "upload file":
-
-    input_file = st.sidebar.file_uploader("Upload Data in CSV Format", type="csv")
-    is_global_warming = False
-check_correct = False
-
 if input_file:
-    try:
-        df = customized_data(
-            csv_file_path=input_file, is_global_warming=is_global_warming
-        )
-        check_correct = True
-    except KeyError:
-        print(KeyError)
-        st.error(
-            "Please make sure the uploaded dataset has date_time as first column",
-            icon="🚨",
-        )
-if check_correct:
-    # st.dataframe(df)
-    times = df["time_elapsed_minutes"].values
+    df = get_cusomized_data(
+        csv_file_path=input_file
+    )
+    #st.dataframe(df)
+    times = df["time_elapsed_months"].values
     with params_lst:
         param_lst = list(df.columns)
-        param_lst.remove("date_time")
-        param_lst.remove("time_elapsed_minutes")
-        param_lst.remove("time_years")
+        param_lst.remove("time")
+        param_lst.remove("time_elapsed_months")
         default_value_indx = param_lst.index(param_lst[0])
         param_slct = st.selectbox(
-            "Select EVI Parameter", param_lst, index=default_value_indx
+            "Select Parameter", param_lst, index=default_value_indx
         )
     with st.sidebar.expander("🔎 Discover"):
         st.markdown(
             "<h2 style='color: yellow' >Data Discovery</h2>", unsafe_allow_html=True
         )
+        show_dataframe = st.checkbox(label="show data")
         plot_data = st.checkbox(label="plot data")
 
     param_slct_values = df[param_slct].values
     if plot_data:
         draw_plot(
             title=f"[{param_slct}] data",
-            times=df["date_time"].values,
+            times=df["time"].values,
             param_slct=param_slct_values,
-            xlabel="date_time",
+            xlabel="Time",
             ylabel=param_slct,
             scale=param_slct_values * 50,
         )
+    if show_dataframe:
+        st.dataframe(df)
+        #st.dataframe(df.loc[:, df.columns!='time_elapsed_months'])
     st.sidebar.markdown("---")
     with st.sidebar.expander("🗜️ Compress"):
         st.markdown(
@@ -76,7 +75,7 @@ if check_correct:
             label="Duration of beats (seconds)",
             help="How long the full dataset should play",
             min_value=60,
-            value=300,
+            value=90,
         )
         bpm = st.number_input(
             label="Tempo",
@@ -139,7 +138,7 @@ if check_correct:
             title=f"{param_slct} normalized data",
             times=times,
             param_slct=y_data,
-            xlabel=f"Time [minutes] since {min(df['date_time']).strftime('%Y-%m-%d %H:%M')}",
+            xlabel=f"Time [minutes] since {min(df['time']).strftime('%Y-%m-%d %H:%M')}",
             ylabel=f"{param_slct} [normalized]",
             scale=50 * y_data,
         )
@@ -204,10 +203,14 @@ if check_correct:
             ylabel="Midi note number",
             scale=vel_data,
         )
+    
     with st.sidebar.expander("🎹 Listen"):
         file_path = generate_audio_file(bpm, t_data, midi_data, vel_data)
-        play_button = st.button(
-            label="Play", on_click=play_music, kwargs={"file_path": file_path}
+        play_with_plot_button = st.button(
+            label="Play (plot)", on_click=play_music, kwargs={"file_path": file_path, "type_display": "plot"}
+        )
+        play_with_bar_button = st.button(
+            label="Play (bar)", on_click=play_music, kwargs={"file_path": file_path, "type_display": "bar"}
         )
         stop_button = st.button(label="Stop", on_click=stop_music)
         with open(file_path, "rb") as file_to_download:
@@ -217,26 +220,32 @@ if check_correct:
                 file_name=os.path.basename(file_path),
             )
     n = len(df)
-    gw_plot_spot = st.empty()
+    #st.dataframe(df)
     plot_spot = st.empty()
+    plot_spot_bar = st.empty()
 
+    function_to_use = make_chart
+    if play_with_bar_button:
+        function_to_use = make_bar_chart
+        
     if stop_button:
         n = 0
         plot_spot = st.empty()
-        if is_global_warming:
-            gw_plot_spot = st.empty()
-
-    if play_button:
-        ymax = max(df[param_slct])
-        ymin = min(df[param_slct])
-        xmax = max(df["date_time"])
-        xmin = min(df["date_time"])
-        start = datetime.datetime.now()
-
+    
+        
+    if play_with_bar_button or play_with_plot_button:
+        ymax = max(df[param_slct])+0.1
+        ymin = min(df[param_slct])-0.1
+        xmax = max(df["time"])
+        xmin = min(df["time"])
+        cursor_time = df['time'][0].year
+        scale = 0      
         for ele in range(n):
-            if is_global_warming:
-                with gw_plot_spot:
-                    make_chart_go_bar_up(df, ele)
             with plot_spot:
-                make_chart(df, ele, param_slct, ymin, ymax, xmin, xmax)
-            time.sleep(df["logic_diff"][ele])
+                make_chart_go_bar(df, ele)
+            with plot_spot_bar:
+                make_chart_go_bar_up(df,ele)                
+
+            time.sleep(df["logic_diff"][ele] - scale)
+            scale = 0.05
+              
