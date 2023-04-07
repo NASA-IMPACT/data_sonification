@@ -39,9 +39,9 @@ def map_range(value, inMin, inMax, outMin, outMax, convert_to_ints=False):
     return ret_result
 
 
-def make_chart_go_bar_up(df, index):
+def make_chart_go_bar_up(df, index, parameter):
     x = df["time_years"]
-    y = df["global_warming"]
+    y = df[parameter]
     max_y_lim = 1
     min_y_lim = 0
     max_x_lim = max(x)
@@ -67,7 +67,7 @@ def make_chart_go_bar_up(df, index):
             "#67000d",
         ]
     )
-    norm = Normalize(df["global_warming"].min(), df["global_warming"].max())
+    norm = Normalize(df[parameter].min(), df[parameter].max())
     colors = [mpl.colors.to_hex(cmap(norm(val))) for val in y]
     fig.add_trace(
         go.Bar(x=x[:index], y=np.ones(len(df))[:index], marker=dict(color=colors))

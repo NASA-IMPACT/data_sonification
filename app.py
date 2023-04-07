@@ -16,7 +16,7 @@ is_global_warming = False
 
 param_slct = st.sidebar.selectbox("Select a variable", param_lst)
 
-input_file = f"./examples/{param_lst[0]}"
+input_file = f"./examples/{param_slct}"
 if param_slct == "globalwarming.csv":
     input_file = "./examples/globalwarming.csv"
     is_global_warming = True
@@ -60,7 +60,7 @@ if check_correct:
     param_slct_values = df[param_slct].values
     if plot_data:
         draw_plot(
-            title=f"[{param_slct}] data",
+            title=f"[{os.path.basename(input_file).rstrip('.csv')}] data",
             times=df["date_time"].values,
             param_slct=param_slct_values,
             xlabel="date_time",
@@ -236,7 +236,7 @@ if check_correct:
         for ele in range(n):
             if is_global_warming:
                 with gw_plot_spot:
-                    make_chart_go_bar_up(df, ele)
+                    make_chart_go_bar_up(df, ele, param_slct)
             with plot_spot:
                 make_chart(df, ele, param_slct, ymin, ymax, xmin, xmax)
             time.sleep(df["logic_diff"][ele])

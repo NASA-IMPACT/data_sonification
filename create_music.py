@@ -18,7 +18,7 @@ def generate_audio_file(bpm, t_data, midi_data, vel_data):
             channel=0,
             pitch=midi_data[i],
             time=t_data[i],
-            duration=2,
+            duration=1,
             volume=vel_data[i],
         )
 
