@@ -1,13 +1,7 @@
 import streamlit as st
-from helpers import (
-    get_cusomized_data,
-    draw_plot,
-    map_range,
-    generate_audio_file,
-    play_music,
-    stop_music,
-    make_chart,
-)
+from create_music import generate_audio_file, play_music, stop_music
+from data_preprocessing import customized_data
+from create_plot import draw_plot, map_range, make_chart, make_chart_go_bar_up
 from audiolazy import str2midi
 import datetime
 import time
@@ -15,11 +9,15 @@ import os
 
 
 params_lst = st.container()
-input_file = "None"
+# input_file = "None"
 
 with st.sidebar.expander("Sample Datasets"):
     st.markdown("<h4 style='color: white' >Sample Dataset</h4>", unsafe_allow_html=True)
-    param_lst = ["None", "dvi", "globalwarming"]
+    param_lst = [
+        "Select or upload a file to begin",
+        "dvi",
+        "globalwarming",
+    ]
     param_slct = st.selectbox("", param_lst)
     if param_slct == "dvi":
         input_file = "./examples/dvi.csv"
@@ -30,11 +28,12 @@ with st.sidebar.expander("Sample Datasets"):
     else:
         with st.sidebar.expander("Upload the data in CSV format"):
             input_file = st.file_uploader("Upload Data in CSV Format", type="csv")
+            is_global_warming = False
 
 params_lst = st.container()
 if input_file:
     try:
-        df = get_cusomized_data(
+        df = customized_data(
             csv_file_path=input_file, is_global_warming=is_global_warming
         )
     except KeyError:
@@ -220,19 +219,26 @@ if input_file:
                 file_name=os.path.basename(file_path),
             )
     n = len(df)
+    gw_plot_spot = st.empty()
     plot_spot = st.empty()
+
     if stop_button:
         n = 0
         plot_spot = st.empty()
+        if is_global_warming:
+            gw_plot_spot = st.empty()
 
     if play_button:
         ymax = max(df[param_slct])
         ymin = min(df[param_slct])
-        xmax = max(df["time"])
-        xmin = min(df["time"])
+        xmax = max(df["date_time"])
+        xmin = min(df["date_time"])
         start = datetime.datetime.now()
 
         for ele in range(n):
+            if is_global_warming:
+                with gw_plot_spot:
+                    make_chart_go_bar_up(df, ele)
             with plot_spot:
                 make_chart(df, ele, param_slct, ymin, ymax, xmin, xmax)
             time.sleep(df["logic_diff"][ele])
