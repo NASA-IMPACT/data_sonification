@@ -30,7 +30,6 @@ with st.sidebar.expander("Sample Datasets"):
             input_file = st.file_uploader("Upload Data in CSV Format", type="csv")
             is_global_warming = False
 
-params_lst = st.container()
 if input_file:
     try:
         df = customized_data(
