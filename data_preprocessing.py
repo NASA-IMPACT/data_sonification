@@ -38,7 +38,10 @@ def customized_data(csv_file_path: str, is_global_warming=False):
     """
     df = read_data(csv_file_path=csv_file_path)
     if is_global_warming:
-        df["date_time"] = pd.to_datetime(df["date_time"], format="%Y")
+        try:
+            df["date_time"] = pd.to_datetime(df["date_time"], format="%Y")
+        except:
+            pass
 
     df["date_time"] = pd.to_datetime(df["date_time"])
     df.sort_values(by=["date_time"], inplace=True)

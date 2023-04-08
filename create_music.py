@@ -24,9 +24,7 @@ def generate_audio_file(bpm, t_data, midi_data, vel_data):
             duration=1,
             volume=vel_data[i],
         )
-    for filename in glob.glob("static/note-*"):
-        os.remove(filename)
-    
+
 
     file_path = f"static/note-{uuid.uuid4()}.midi"
     print(f"file generated: {file_path}")
@@ -36,23 +34,28 @@ def generate_audio_file(bpm, t_data, midi_data, vel_data):
 
 
 def play_music(bpm, t_data, midi_data, vel_data):
-    play_music_spot = st.empty()
+    for filename in glob.glob("static/note-*"):
+        os.remove(filename) 
     st.session_state["audio_file"] = generate_audio_file(bpm, t_data, midi_data, vel_data)
     file_path = f"./app/{st.session_state.audio_file}"
-    print(f"file to play: {st.session_state.audio_file}")
-    with play_music_spot:
-        html(f"""
-            <script src='http://www.midijs.net/lib/midi.js'></script>
-            <script>console.log('hello');MIDIjs.play('{file_path}');</script>
-            """)
+    try:
+        pygame.init()
+        pygame.mixer
+        pygame.mixer.music.load(st.session_state.audio_file)
+        pygame.mixer.music.play()
+    except:
+        play_music_spot = st.empty()
+        with play_music_spot:
+            html(f"""
+                <script src='http://www.midijs.net/lib/midi.js'></script>
+                <script>MIDIjs.play('{file_path}');</script>
+                """)
     return
-    pygame.init()
-    pygame.mixer
-    pygame.mixer.music.load(file_path)
-    pygame.mixer.music.play()
+
 
 
 def stop_music():
-    play_music_spot = st.empty()
-    return
-    pygame.mixer.music.stop()
+    try:
+        pygame.mixer.music.stop()
+    except:
+        print("Running client side")

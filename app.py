@@ -14,16 +14,16 @@ if "audio_file" not in st.session_state:
 params_lst = st.container()
 # input_file = "None"
 #st.sidebar.markdown("Select a variable")
-param_lst =[os.path.basename(file_) for file_ in os.listdir("./examples")] + ["<upload file>"]
+param_lst =[os.path.basename(file_) for file_ in os.listdir("./examples") if file_.endswith('csv')] + ["<upload file>"]
 is_global_warming = False
-
+is_global_warming_per_country = False
 param_slct = st.sidebar.selectbox("Select a file", param_lst)
 
 input_file = f"./examples/{param_slct}"
-if param_slct == "globalwarming.csv":
-    input_file = "./examples/globalwarming.csv"
+if param_slct in ["globalwarming.csv", "Surface_temperature_per_country.csv"]:
     is_global_warming = True
-
+if param_slct == "Surface_temperature_per_country.csv":
+    is_global_warming_per_country = True
 if param_slct == "<upload file>":
 
     input_file = st.sidebar.file_uploader("Upload Data in CSV Format", type="csv")
@@ -43,7 +43,7 @@ if input_file:
             icon="🚨",
         )
 if check_correct:
-    # st.dataframe(df)
+    #st.dataframe(df)
     times = df["time_elapsed_minutes"].values
     with params_lst:
         param_lst = list(df.columns)
@@ -241,7 +241,7 @@ if check_correct:
         for ele in range(n):
             if is_global_warming:
                 with gw_plot_spot:
-                    make_chart_go_bar_up(df, ele, param_slct)
+                    make_chart_go_bar_up(df, ele, param_slct, up_and_down=is_global_warming_per_country)
             with plot_spot:
                 make_chart(df, ele, param_slct, ymin, ymax, xmin, xmax)
             time.sleep(df["logic_diff"][ele])

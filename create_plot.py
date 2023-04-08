@@ -39,13 +39,23 @@ def map_range(value, inMin, inMax, outMin, outMax, convert_to_ints=False):
     return ret_result
 
 
-def make_chart_go_bar_up(df, index, parameter):
+def make_chart_go_bar_up(df, index, parameter, up_and_down = False):
     x = df["time_years"]
     y = df[parameter]
     max_y_lim = 1
     min_y_lim = 0
     max_x_lim = max(x)
     min_x_lim = min(x)
+    y_indx = np.ones(len(df))
+    y_title = "Normalized"
+    
+    if up_and_down:
+        y_indx = df[parameter]
+        max_y_lim = max(y_indx)
+        min_y_lim = min(y_indx)
+        y_title = "tmp (°C)"
+
+        
     fig = go.Figure(layout_yaxis_range=[min_y_lim, max_y_lim])
     cmap = ListedColormap(
         [
@@ -70,10 +80,12 @@ def make_chart_go_bar_up(df, index, parameter):
     norm = Normalize(df[parameter].min(), df[parameter].max())
     colors = [mpl.colors.to_hex(cmap(norm(val))) for val in y]
     fig.add_trace(
-        go.Bar(x=x[:index], y=np.ones(len(df))[:index], marker=dict(color=colors))
+        go.Bar(x=x[:index], y=y_indx[:index], marker=dict(color=colors))
     )
     fig.update_layout(
         xaxis_title="years",
+        yaxis_title=f"{parameter}:{y_title}",
         xaxis=dict(range=[min_x_lim, max_x_lim]),
+        yaxis=dict(range=[min_y_lim, max_y_lim])
     )
     st.write(fig)
