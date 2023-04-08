@@ -8,20 +8,23 @@ import time
 import os
 
 
+if "audio_file" not in st.session_state:
+    st.session_state["audio_file"] =""
+
 params_lst = st.container()
 # input_file = "None"
 #st.sidebar.markdown("Select a variable")
-param_lst =[os.path.basename(file_) for file_ in os.listdir("./examples")] + ["upload file"]
+param_lst =[os.path.basename(file_) for file_ in os.listdir("./examples")] + ["<upload file>"]
 is_global_warming = False
 
-param_slct = st.sidebar.selectbox("Select a variable", param_lst)
+param_slct = st.sidebar.selectbox("Select a file", param_lst)
 
 input_file = f"./examples/{param_slct}"
 if param_slct == "globalwarming.csv":
     input_file = "./examples/globalwarming.csv"
     is_global_warming = True
 
-if param_slct == "upload file":
+if param_slct == "<upload file>":
 
     input_file = st.sidebar.file_uploader("Upload Data in CSV Format", type="csv")
     is_global_warming = False
@@ -49,7 +52,7 @@ if check_correct:
         param_lst.remove("time_years")
         default_value_indx = param_lst.index(param_lst[0])
         param_slct = st.selectbox(
-            "Select EVI Parameter", param_lst, index=default_value_indx
+            "Select Parameter", param_lst, index=default_value_indx
         )
     with st.sidebar.expander("🔎 Discover"):
         st.markdown(
@@ -76,7 +79,7 @@ if check_correct:
             label="Duration of beats (seconds)",
             help="How long the full dataset should play",
             min_value=60,
-            value=300,
+            value=150,
         )
         bpm = st.number_input(
             label="Tempo",
@@ -149,10 +152,10 @@ if check_correct:
             unsafe_allow_html=True,
         )
         vel_min = st.number_input(
-            label="velocity min", help="Minimum Velocity", min_value=35, max_value=50
+            label="velocity min", help="Minimum Velocity up to 50", min_value=35, max_value=50
         )
         vel_max = st.number_input(
-            label="velocity max", help="Maximum Velocity", min_value=127, max_value=300
+            label="velocity max", help="Maximum Velocity up to 255", min_value=127, max_value=255
         )
         plot_midi_data = st.checkbox(label="plot midi data per beat")
     note_names = [
@@ -204,35 +207,37 @@ if check_correct:
             ylabel="Midi note number",
             scale=vel_data,
         )
+    
     with st.sidebar.expander("🎹 Listen"):
-        file_path = generate_audio_file(bpm, t_data, midi_data, vel_data)
+        
         play_button = st.button(
-            label="Play", on_click=play_music, kwargs={"file_path": file_path}
+            label="Play", on_click=play_music, 
+            kwargs={"bpm": bpm, "t_data": t_data,"midi_data":midi_data, "vel_data":vel_data}
         )
         stop_button = st.button(label="Stop", on_click=stop_music)
-        with open(file_path, "rb") as file_to_download:
-            st.download_button(
-                "Download audio",
-                file_to_download,
-                file_name=os.path.basename(file_path),
-            )
+        if st.session_state["audio_file"]:
+            with open(st.session_state["audio_file"], "rb") as file_to_download:
+                st.download_button(
+                    "Download audio",
+                    file_to_download,
+                    file_name=os.path.basename(st.session_state["audio_file"]),
+                )
     n = len(df)
     gw_plot_spot = st.empty()
     plot_spot = st.empty()
+
 
     if stop_button:
         n = 0
         plot_spot = st.empty()
         if is_global_warming:
             gw_plot_spot = st.empty()
-
     if play_button:
         ymax = max(df[param_slct])
         ymin = min(df[param_slct])
         xmax = max(df["date_time"])
         xmin = min(df["date_time"])
         start = datetime.datetime.now()
-
         for ele in range(n):
             if is_global_warming:
                 with gw_plot_spot:
