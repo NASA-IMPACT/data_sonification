@@ -225,6 +225,8 @@ if check_correct:
     n = len(df)
     gw_plot_spot = st.empty()
     plot_spot = st.empty()
+    calibre = 0.03
+    time_to_sleep = 0
 
 
     if stop_button:
@@ -233,15 +235,17 @@ if check_correct:
         if is_global_warming:
             gw_plot_spot = st.empty()
     if play_button:
+        
         ymax = max(df[param_slct])
         ymin = min(df[param_slct])
         xmax = max(df["date_time"])
         xmin = min(df["date_time"])
         start = datetime.datetime.now()
         for ele in range(n):
+            time_to_sleep = df["logic_diff"][ele] - calibre if df["logic_diff"][ele] - calibre > 0 else 0
             if is_global_warming:
                 with gw_plot_spot:
                     make_chart_go_bar_up(df, ele, param_slct, up_and_down=is_global_warming_per_country)
             with plot_spot:
                 make_chart(df, ele, param_slct, ymin, ymax, xmin, xmax)
-            time.sleep(df["logic_diff"][ele])
+            time.sleep(time_to_sleep)

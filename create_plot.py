@@ -6,7 +6,6 @@ import matplotlib as mpl
 from matplotlib.colors import ListedColormap, Normalize
 import numpy as np
 
-
 def make_chart(df: pd.DataFrame, index, y_col, ymin, ymax, xmin, xmax):
     fig = go.Figure(layout_yaxis_range=[ymin, ymax])
     fig.add_trace(
@@ -55,7 +54,6 @@ def make_chart_go_bar_up(df, index, parameter, up_and_down = False):
         min_y_lim = min(y_indx)
         y_title = "tmp (°C)"
 
-        
     fig = go.Figure(layout_yaxis_range=[min_y_lim, max_y_lim])
     cmap = ListedColormap(
         [
@@ -79,13 +77,15 @@ def make_chart_go_bar_up(df, index, parameter, up_and_down = False):
     )
     norm = Normalize(df[parameter].min(), df[parameter].max())
     colors = [mpl.colors.to_hex(cmap(norm(val))) for val in y]
-    fig.add_trace(
-        go.Bar(x=x[:index], y=y_indx[:index], marker=dict(color=colors))
-    )
     fig.update_layout(
         xaxis_title="years",
         yaxis_title=f"{parameter}:{y_title}",
         xaxis=dict(range=[min_x_lim, max_x_lim]),
         yaxis=dict(range=[min_y_lim, max_y_lim])
     )
+
+    fig.add_trace(
+        go.Bar(x=x[:index], y=y_indx[:index], marker=dict(color=colors))
+    )
+
     st.write(fig)
