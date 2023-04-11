@@ -1,41 +1,58 @@
 import streamlit as st
-from helpers import (
-    get_cusomized_data,
-    draw_plot,
-    map_range,
-    generate_audio_file,
-    play_music,
-    stop_music,
-    make_chart,
-)
+from create_music import generate_audio_file, play_music, stop_music
+from data_preprocessing import customized_data
+from create_plot import draw_plot, map_range, make_chart, make_chart_go_bar_up
 from audiolazy import str2midi
 import datetime
 import time
 import os
 
-columns_to_include = [
-    "time",
-    "Min EVI",
-    "Max EVI",
-    "Mean EVI",
-    "Median EVI",
-    "Standard Deviation EVI",
-]
-input_file = st.file_uploader("Upload Data in CSV format", type="csv")
+
+if "audio_file" not in st.session_state:
+    st.session_state["audio_file"] =""
+
 params_lst = st.container()
+# input_file = "None"
+#st.sidebar.markdown("Select a variable")
+param_lst =[os.path.basename(file_) for file_ in os.listdir("./examples") if file_.endswith('csv')] + ["<upload file>"]
+is_global_warming = False
+is_global_warming_per_country = False
+param_slct = st.sidebar.selectbox("Select a file", param_lst)
+
+input_file = f"./examples/{param_slct}"
+if param_slct in ["globalwarming.csv", "Surface_temperature_per_country.csv"]:
+    is_global_warming = True
+if param_slct == "Surface_temperature_per_country.csv":
+    is_global_warming_per_country = True
+if param_slct == "<upload file>":
+
+    input_file = st.sidebar.file_uploader("Upload Data in CSV Format", type="csv")
+    is_global_warming = False
+check_correct = False
+
 if input_file:
-    df = get_cusomized_data(
-        csv_file_path=input_file, columns_to_include=columns_to_include
-    )
+    try:
+        df = customized_data(
+            csv_file_path=input_file, is_global_warming=is_global_warming
+        )
+        check_correct = True
+    except KeyError:
+        print(KeyError)
+        st.error(
+            "Please make sure the uploaded dataset has date_time as first column",
+            icon="🚨",
+        )
+if check_correct:
     #st.dataframe(df)
     times = df["time_elapsed_minutes"].values
     with params_lst:
         param_lst = list(df.columns)
-        param_lst.remove("time")
+        param_lst.remove("date_time")
         param_lst.remove("time_elapsed_minutes")
-        default_value_indx = param_lst.index("Mean EVI")
+        param_lst.remove("time_years")
+        default_value_indx = param_lst.index(param_lst[0])
         param_slct = st.selectbox(
-            "Select EVI Parameter", param_lst, index=default_value_indx
+            "Select Parameter", param_lst, index=default_value_indx
         )
     with st.sidebar.expander("🔎 Discover"):
         st.markdown(
@@ -46,10 +63,10 @@ if input_file:
     param_slct_values = df[param_slct].values
     if plot_data:
         draw_plot(
-            title=f"[{param_slct}] data",
-            times=df["time"].values,
+            title=f"[{os.path.basename(input_file).rstrip('.csv')}] data",
+            times=df["date_time"].values,
             param_slct=param_slct_values,
-            xlabel="Time",
+            xlabel="date_time",
             ylabel=param_slct,
             scale=param_slct_values * 50,
         )
@@ -62,7 +79,7 @@ if input_file:
             label="Duration of beats (seconds)",
             help="How long the full dataset should play",
             min_value=60,
-            value=300,
+            value=150,
         )
         bpm = st.number_input(
             label="Tempo",
@@ -125,7 +142,7 @@ if input_file:
             title=f"{param_slct} normalized data",
             times=times,
             param_slct=y_data,
-            xlabel=f"Time [minutes] since {min(df['time']).strftime('%Y-%m-%d %H:%M')}",
+            xlabel=f"Time [minutes] since {min(df['date_time']).strftime('%Y-%m-%d %H:%M')}",
             ylabel=f"{param_slct} [normalized]",
             scale=50 * y_data,
         )
@@ -135,10 +152,10 @@ if input_file:
             unsafe_allow_html=True,
         )
         vel_min = st.number_input(
-            label="velocity min", help="Minimum Velocity", min_value=35, max_value=50
+            label="velocity min", help="Minimum Velocity up to 50", min_value=35, max_value=50
         )
         vel_max = st.number_input(
-            label="velocity max", help="Maximum Velocity", min_value=127, max_value=300
+            label="velocity max", help="Maximum Velocity up to 255", min_value=127, max_value=255
         )
         plot_midi_data = st.checkbox(label="plot midi data per beat")
     note_names = [
@@ -190,32 +207,45 @@ if input_file:
             ylabel="Midi note number",
             scale=vel_data,
         )
+    
     with st.sidebar.expander("🎹 Listen"):
-        file_path = generate_audio_file(bpm, t_data, midi_data, vel_data)
+        
         play_button = st.button(
-            label="Play", on_click=play_music, kwargs={"file_path": file_path}
+            label="Play", on_click=play_music, 
+            kwargs={"bpm": bpm, "t_data": t_data,"midi_data":midi_data, "vel_data":vel_data}
         )
         stop_button = st.button(label="Stop", on_click=stop_music)
-        with open(file_path, "rb") as file_to_download:
-            st.download_button(
-                "Download audio",
-                file_to_download,
-                file_name=os.path.basename(file_path),
-            )
+        if st.session_state["audio_file"]:
+            with open(st.session_state["audio_file"], "rb") as file_to_download:
+                st.download_button(
+                    "Download audio",
+                    file_to_download,
+                    file_name=os.path.basename(st.session_state["audio_file"]),
+                )
     n = len(df)
+    gw_plot_spot = st.empty()
     plot_spot = st.empty()
+    calibre = 0.03
+    time_to_sleep = 0
+
+
     if stop_button:
         n = 0
         plot_spot = st.empty()
-
+        if is_global_warming:
+            gw_plot_spot = st.empty()
     if play_button:
+        
         ymax = max(df[param_slct])
         ymin = min(df[param_slct])
-        xmax = max(df["time"])
-        xmin = min(df["time"])
+        xmax = max(df["date_time"])
+        xmin = min(df["date_time"])
         start = datetime.datetime.now()
-
         for ele in range(n):
+            time_to_sleep = df["logic_diff"][ele] - calibre if df["logic_diff"][ele] - calibre > 0 else 0
+            if is_global_warming:
+                with gw_plot_spot:
+                    make_chart_go_bar_up(df, ele, param_slct, up_and_down=is_global_warming_per_country)
             with plot_spot:
                 make_chart(df, ele, param_slct, ymin, ymax, xmin, xmax)
-            time.sleep(df["logic_diff"][ele])
+            time.sleep(time_to_sleep)
