@@ -37,6 +37,7 @@ def customized_data(csv_file_path: str, is_global_warming=False):
         [DataFrame]: Returns a processed dataframe.
     """
     df = read_data(csv_file_path=csv_file_path)
+    df_origin = df.copy()
     if is_global_warming:
         try:
             df["date_time"] = pd.to_datetime(df["date_time"], format="%Y")
@@ -52,4 +53,4 @@ def customized_data(csv_file_path: str, is_global_warming=False):
         lambda row: (row.days * 24 * 60) + (row.seconds // 60)
     )
     df.drop(["index"], axis=1, inplace=True)
-    return df
+    return df_origin,  df

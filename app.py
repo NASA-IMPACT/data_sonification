@@ -32,7 +32,7 @@ check_correct = False
 
 if input_file:
     try:
-        df = customized_data(
+        df_orgin, df = customized_data(
             csv_file_path=input_file, is_global_warming=is_global_warming
         )
         check_correct = True
@@ -59,11 +59,14 @@ if check_correct:
             "<h2 style='color: yellow' >Data Discovery</h2>", unsafe_allow_html=True
         )
         plot_data = st.checkbox(label="plot data")
+        look_at_data = st.checkbox(label="data")
 
     param_slct_values = df[param_slct].values
+    if look_at_data:
+        st.dataframe(df_orgin)
     if plot_data:
         draw_plot(
-            title=f"[{os.path.basename(input_file).rstrip('.csv')}] data",
+            title=f"[{os.path.basename(str(input_file)).rstrip('.csv')}] data",
             times=df["date_time"].values,
             param_slct=param_slct_values,
             xlabel="date_time",
