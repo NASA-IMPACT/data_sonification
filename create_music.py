@@ -27,7 +27,6 @@ def generate_audio_file(bpm, t_data, midi_data, vel_data):
 
 
     file_path = f"static/note-{uuid.uuid4()}.midi"
-    print(f"file generated: {file_path}")
     with open(file_path, "wb") as f:
         my_midi_file.writeFile(f)
     return file_path
